@@ -17,6 +17,8 @@ REG_PA_CONFIG = 0x09
 REG_LNA = 0x0c
 REG_FIFO_ADDR_PTR = 0x0d
 
+REG_TEMP 0x3C
+
 REG_FIFO_TX_BASE_ADDR = 0x0e
 FifoTxBaseAddr = 0x00
 # FifoTxBaseAddr = 0x80
@@ -45,6 +47,8 @@ REG_VERSION = 0x42
 
 # modes
 MODE_LONG_RANGE_MODE = 0x80  # bit 7: 1 => LoRa mode
+MODE_TRANSCEIVER_MODE = 0x07 # bit [0-2]
+MODE_FSK_OOK_MODE = 0x00
 MODE_SLEEP = 0x00
 MODE_STDBY = 0x01
 MODE_TX = 0x03
@@ -147,7 +151,7 @@ class SX127x:
 
     def endPacket(self):
         # put in TX mode
-        self.writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX)
+        self.writeRegister(REG_OP_MODE, MODE_TRANSCEIVER_MODE | MODE_TX)
 
         # wait for TX done, standby automatically on TX_DONE
         while (self.readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0:
@@ -208,11 +212,14 @@ class SX127x:
 
 
     def standby(self):
-        self.writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_STDBY)
+        self.writeRegister(REG_OP_MODE, MODE_TRANSCEIVER_MODE | MODE_STDBY)
 
 
     def sleep(self):
-        self.writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_SLEEP)
+        self.writeRegister(REG_OP_MODE, MODE_TRANSCEIVER_MODE | MODE_SLEEP)
+
+    def fsk_ook(self)
+	self.writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_FSK_OOK_MODE)
 
 
     def setTxPower(self, level, outputPin = PA_OUTPUT_PA_BOOST_PIN):
@@ -323,7 +330,7 @@ class SX127x:
 
         # The last packet always starts at FIFO_RX_CURRENT_ADDR
         # no need to reset FIFO_ADDR_PTR
-        self.writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS)
+        self.writeRegister(REG_OP_MODE, MODE_TRANSCEIVER_MODE | MODE_RX_CONTINUOUS)
 
 
     # on RPi, interrupt callback is threaded and racing with main thread,
@@ -358,11 +365,11 @@ class SX127x:
             # automatically standby when RX_DONE
             return True
 
-        elif self.readRegister(REG_OP_MODE) != (MODE_LONG_RANGE_MODE | MODE_RX_SINGLE):
+        elif self.readRegister(REG_OP_MODE) != (MODE_LONG_RANGE_MODE | MODE_RX_SINGLE): # ?? check the  mask !
             # no packet received.
             # reset FIFO address / # enter single RX mode
             self.writeRegister(REG_FIFO_ADDR_PTR, FifoRxBaseAddr)
-            self.writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_SINGLE)
+            self.writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_RX_SINGLE) # ?? Check the mask !
 
 
     def read_payload(self):
